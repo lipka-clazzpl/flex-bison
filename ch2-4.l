@@ -32,6 +32,7 @@ of |
 the {/* pomiń */ }
 
 [a-zA-Z]+('[s|t])?	{ addref(YY_CURRENT_BUFFER->yy_ch_buf, yytext, yylineno); }
+.|\n	{ /* ignoruj wszytkie pozostałe napisy */ }
 
 %%
 
@@ -81,6 +82,8 @@ void addref(const char* filename, const char* symbol_name, int lineno) {
 	struct ref *r;
 	struct symbol *sp = lookup(symbol_name);
 
+	printf("addref: sp=%s\n", sp->name);
+
 	// jeżeli zgadzają się wszystkie dane dot. referecji, nie ma potrzeby dopisywać jeszcze raz
 	// dlaczego to nie jest pętla?
 	if(sp->reflist && sp->reflist->lineno == lineno && sp->reflist->filename == filename) {
@@ -92,13 +95,30 @@ void addref(const char* filename, const char* symbol_name, int lineno) {
 	return;
 }
 
+void printrefs() {
+	struct symbol *sp;
+	int i;
+	printf("\n");
+	for(sp = symtab ; sp < symtab + NHASH; sp++) {
+		//if(sp->name) printf("sp->name = %s\t", sp->name);
+		if(sp->name) {
+			printf("sp->name = %s\t", sp->name); // nie zdarzyl tego na wyjsciu wypisac
+			do {
+				printf("linia %d, plik %s", sp->reflist->lineno, sp->reflist->filename);
+			} while(sp->reflist->next);
+		}
+	}
+	printf("\n");
+}
+
 int main(int argc, char** argv) {
 	if(argc < 2) {
 		yylineno = 1;
 		yylex();	
 	}
 	else {
-		for(int i = 1; i < argc; i++) {
+		int i;
+		for(i = 1; i < argc; i++) {
 			FILE *f = fopen(argv[i], "r");
 			if(!f) { 
 				perror(argv[i]);
@@ -111,4 +131,5 @@ int main(int argc, char** argv) {
 		}
 	}
 
+	printrefs();
 }
