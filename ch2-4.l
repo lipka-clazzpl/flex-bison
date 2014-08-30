@@ -121,24 +121,39 @@ int symcompare(const void *s1, const void *s2) {
 
 void printrefs() {
 	struct symbol *sp;
-	int i;
 
 	qsort(symtab, NHASH, sizeof(struct symbol), *symcompare);
 
-	printf("\n");
-	for(sp = symtab ; sp < symtab + NHASH; sp++) {
-		//if(sp->name) printf("sp->name = %s\t", sp->name);
-		if(sp->name) {
-			printf("sp->name = %s\t", sp->name); // nie zdarzyl tego na wyjsciu wypisac
-			struct ref *rp = sp->reflist;
-			while(rp) {
-				printf("linia %d, plik %s ", rp->lineno, rp->filename);
-				rp = rp->next;
+	for(sp = symtab ; sp->name && sp < symtab + NHASH; sp++) {
+		// odwrocenie listy referencji do symbolu
+		struct ref *rpp = 0;
+		struct ref *rp  = sp->reflist;
+		struct ref *rpn;
+
+		do {
+			// niezmienniki
+			rpn = rp->next;
+
+			// ustawienie dla pary aktualny poprzedni
+			rp->next = rpp;
+
+			// ustawienia dla pary aktualny nastepny
+			rpp = rp;
+			rp = rpn;
+		} while (rp);
+
+		char *prevfilename;
+		printf("%10s", sp->name);
+		for(rp = rpp; rp; rp = rp->next) {
+			if(rp->filename != prevfilename) { 
+				printf(" %s :", rp->filename); 
+				prevfilename = rp->filename;
 			}
-			printf("\n");
+			printf(" %d", rp->lineno);
 		}
+
+		printf("\n");
 	}
-	printf("\n");
 }
 
 int main(int argc, char** argv) {
