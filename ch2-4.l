@@ -2,6 +2,8 @@
 
 %{
 
+	char *currfname;
+
 	struct symbol {
 		char *name;
 		struct ref *reflist;
@@ -31,7 +33,7 @@ an |
 of |
 the {/* pomiń */ }
 
-[a-zA-Z]+('[s|t])?	{ addref(YY_CURRENT_BUFFER->yy_ch_buf, yytext, yylineno); }
+[a-zA-Z]+('[s|t])?	{ addref(currfname, yytext, yylineno); }
 .|\n	{ /* ignoruj wszytkie pozostałe napisy */ }
 
 %%
@@ -91,21 +93,49 @@ void addref(const char* filename, const char* symbol_name, int lineno) {
 	}
 
 	r = malloc(sizeof(struct ref));
+	r->filename = filename;
+	r->lineno   = lineno;
+	r->next     = sp->reflist; // zamiana pierwszego elementu
+	sp->reflist = r;
 
 	return;
+}
+
+// qsort sortuje w rosnacej kolejnosci
+int symcompare(const void *s1, const void *s2) {
+	const struct symbol *sp1 = s1;
+	const struct symbol *sp2 = s2;
+
+	if(!sp1->name) {
+		if(!sp2->name) {
+		  return 0;
+		}
+		return 1; // 1 = s1 > s2, puste elementy zostana wypchniete na koniec 
+	}
+	if(!sp2->name) return -1; // ostatnia mozliwosc, wypycham puste sp2 na koniec
+                                  // -1 = s1 < s2 , s2 wedruje na koniec jako ze 
+				  // kolejnosc jest rosnaca
+
+	return strcmp(sp1->name, sp2->name);
 }
 
 void printrefs() {
 	struct symbol *sp;
 	int i;
+
+	qsort(symtab, NHASH, sizeof(struct symbol), *symcompare);
+
 	printf("\n");
 	for(sp = symtab ; sp < symtab + NHASH; sp++) {
 		//if(sp->name) printf("sp->name = %s\t", sp->name);
 		if(sp->name) {
 			printf("sp->name = %s\t", sp->name); // nie zdarzyl tego na wyjsciu wypisac
-			do {
-				printf("linia %d, plik %s", sp->reflist->lineno, sp->reflist->filename);
-			} while(sp->reflist->next);
+			struct ref *rp = sp->reflist;
+			while(rp) {
+				printf("linia %d, plik %s ", rp->lineno, rp->filename);
+				rp = rp->next;
+			}
+			printf("\n");
 		}
 	}
 	printf("\n");
@@ -113,6 +143,7 @@ void printrefs() {
 
 int main(int argc, char** argv) {
 	if(argc < 2) {
+		currfname = "(stdin)";
 		yylineno = 1;
 		yylex();	
 	}
@@ -124,6 +155,7 @@ int main(int argc, char** argv) {
 				perror(argv[i]);
 				exit(1);
 			}
+			currfname = argv[i];
 			yyrestart(f);
 			yylineno = 1;
 			yylex();
