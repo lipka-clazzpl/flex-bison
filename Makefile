@@ -1,3 +1,11 @@
+fb2-3: fb2-3.l
+	flex fb2-3.l
+	cc -o $@ lex.yy.c 
+
+fb2-5: fb2-5.l
+	flex fb2-5.l
+	cc -o $@ lex.yy.c 
+
 ch2-4: ch2-4.l
 	flex ch2-4.l
 	cc -o $@ lex.yy.c 
